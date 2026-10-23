@@ -97,7 +97,9 @@ export default function NewClinicPage() {
 
       <section className="space-y-3">
         <h2 className="text-md font-semibold text-fg">التقييم الرقمي</h2>
-        <p className="text-xs text-fg-secondary">اترك الحقول على "غير معروف" إن لم تتحقق منها بعد.</p>
+<p className="text-xs text-fg-secondary">
+  اترك الحقول على «غير معروف» إن لم تتحقق منها بعد.
+</p>
         <div className="space-y-2">
           {[
             ['hasWebsite', 'لديها موقع؟'],
