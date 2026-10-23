@@ -5,8 +5,6 @@ export default {
     serverActions: { bodySizeLimit: '1mb' },
   },
   eslint: {
-    // يتخطى ESLint أثناء بناء الإنتاج فقط.
-    // أخطاء TypeScript تبقى تُفحص وتوقف البناء عند الحاجة.
     ignoreDuringBuilds: true,
   },
 };

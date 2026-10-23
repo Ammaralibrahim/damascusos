@@ -90,8 +90,8 @@ async function main() {
   const existing = await User.findOne({ username }).lean();
   if (existing) {
     console.log(`  ℹ المستخدم "${username}" موجود بالفعل.`);
-    // `existing` هو عنصر واحد (findOne) — لكن نتحقق بـ cast لأن Mongoose
-    // يُعيد نوعًا مركّبًا في بعض الإصدارات
+    // `existing` عنصر واحد في وقت التشغيل، لكن Mongoose 8 يُعيد نوعًا مركّبًا
+    // لـ .lean() في بعض الإصدارات. نستخدم cast آمن ونفحص القيم قبل استخدامها.
     const doc = existing as unknown as {
       _id?: unknown;
       passwordHash?: string;
@@ -100,11 +100,11 @@ async function main() {
     if (doc._id != null) {
       console.log(`    _id: ${String(doc._id)}`);
     }
-    if (doc.passwordHash) {
+    if (typeof doc.passwordHash === 'string') {
       console.log(`    passwordHash يبدأ بـ: ${doc.passwordHash.slice(0, 10)}…`);
     }
-    if (doc.createdAt) {
-      console.log(`    created: ${new Date(doc.createdAt).toISOString()}`);
+    if (doc.createdAt instanceof Date) {
+      console.log(`    created: ${doc.createdAt.toISOString()}`);
     }
     console.log('\n  لإعادة تعيين كلمة المرور:');
     console.log(`    npm run reset-password ${username} "كلمة-جديدة"`);
