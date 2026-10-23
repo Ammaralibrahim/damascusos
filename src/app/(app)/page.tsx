@@ -4,19 +4,31 @@ import { Button, Card, Empty, Section, StatCard } from '@/components/ui';
 import { PriorityBadge } from '@/components/status-badge';
 import { PageHeader } from '@/components/page-header';
 import { requireSession } from '@/lib/auth';
-import { getSettings, todayTasks, openFollowUps } from '@/lib/data';
-import { computeNextSteps } from '@/lib/next-step';
+import {
+  getSettings,
+  todayTasks,
+  openFollowUps,
+  type TodayTask,
+  type OpenFollowUp,
+  type SettingsResult,
+} from '@/lib/data';
+import { computeNextSteps, type Suggestion } from '@/lib/next-step';
 
 export default async function DashboardPage() {
   const session = await requireSession();
-  const [settings, tasks, follows, nextSteps] = await Promise.all([
-    getSettings(session.userId),
-    todayTasks(),
-    openFollowUps(),
-    computeNextSteps(),
-  ]);
+
+  // cast صريح لكل نتيجة — حتى لو استنتج TypeScript نوعًا غير دقيق، نُجبره
+  const [settings, tasks, follows, nextSteps]: [
+    SettingsResult,
+    TodayTask[],
+    OpenFollowUp[],
+    Suggestion[],
+  ] = await Promise.all([getSettings(session.userId), todayTasks(), openFollowUps(), computeNextSteps()]);
+
   const nextStep = nextSteps[0];
-  const top3 = tasks.filter((t) => t.status !== 'done' && t.status !== 'cancelled').slice(0, 3);
+  const top3 = tasks
+    .filter((t) => t.status !== 'done' && t.status !== 'cancelled')
+    .slice(0, 3);
   const overdue = follows.filter((f) => f.state === 'overdue');
 
   return (
@@ -27,14 +39,16 @@ export default async function DashboardPage() {
         description={`${settings.projectName} · ${settings.defaultMarket}`}
       />
 
-      {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatCard label="مهام اليوم" value={top3.length} tone="default" />
-        <StatCard label="متابعات متأخرة" value={overdue.length} tone={overdue.length > 0 ? 'bad' : 'ok'} />
+        <StatCard
+          label="متابعات متأخرة"
+          value={overdue.length}
+          tone={overdue.length > 0 ? 'bad' : 'ok'}
+        />
         <StatCard label="مفتوحة" value={follows.length} tone="accent" />
       </div>
 
-      {/* Next Step — البطاقة الأهم */}
       <section
         aria-labelledby="next-step-title"
         className="rounded-xl border border-accent/20 bg-gradient-to-b from-accent-soft to-surface p-5 md:p-6"
@@ -44,7 +58,9 @@ export default async function DashboardPage() {
             <Sparkles size={18} strokeWidth={1.75} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] uppercase tracking-wider text-accent">الخطوة التالية</p>
+            <p className="text-[11px] uppercase tracking-wider text-accent">
+              الخطوة التالية
+            </p>
             <h2 id="next-step-title" className="mt-1 text-lg font-medium text-fg">
               {nextStep?.action ?? 'لا توجد خطوة عاجلة الآن'}
             </h2>
@@ -66,7 +82,6 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Tasks */}
       <Section
         title="مهام اليوم"
         description={`${top3.length} مهام نشطة`}
@@ -97,13 +112,15 @@ export default async function DashboardPage() {
           <ul className="overflow-hidden rounded-lg border border-line-subtle bg-surface">
             {top3.map((t, idx) => (
               <li
-                key={String(t._id)}
+                key={t._id}
                 className={`flex items-center gap-3 px-4 py-3 ${
                   idx !== top3.length - 1 ? 'border-b border-line-subtle' : ''
                 }`}
               >
                 <PriorityBadge priority={t.priority} />
-                <span className="min-w-0 flex-1 truncate text-sm text-fg">{t.title}</span>
+                <span className="min-w-0 flex-1 truncate text-sm text-fg">
+                  {t.title}
+                </span>
                 {t.estimatedMinutes ? (
                   <span className="inline-flex items-center gap-1 text-xs text-fg-tertiary tabular">
                     <Clock size={12} strokeWidth={1.75} />
@@ -116,10 +133,13 @@ export default async function DashboardPage() {
         )}
       </Section>
 
-      {/* Follow-ups */}
       <Section
         title="متابعات متأخرة"
-        description={overdue.length === 0 ? 'لا شيء متأخر' : `${overdue.length} عنصر يحتاج انتباهك`}
+        description={
+          overdue.length === 0
+            ? 'لا شيء متأخر'
+            : `${overdue.length} عنصر يحتاج انتباهك`
+        }
       >
         {overdue.length === 0 ? (
           <Card padding="sm">
@@ -132,18 +152,27 @@ export default async function DashboardPage() {
           <ul className="overflow-hidden rounded-lg border border-line-subtle bg-surface">
             {overdue.slice(0, 5).map((f, idx) => {
               const clinic =
-                f.clinicId && typeof f.clinicId === 'object' && 'name' in f.clinicId
+                f.clinicId &&
+                typeof f.clinicId === 'object' &&
+                'name' in f.clinicId
                   ? (f.clinicId as { name: string })
                   : null;
               return (
                 <li
-                  key={String(f._id)}
+                  key={f._id}
                   className={`flex items-center gap-3 px-4 py-3 ${
-                    idx !== Math.min(overdue.length, 5) - 1 ? 'border-b border-line-subtle' : ''
+                    idx !== Math.min(overdue.length, 5) - 1
+                      ? 'border-b border-line-subtle'
+                      : ''
                   }`}
                 >
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-bad" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate text-sm text-fg">{f.note}</span>
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full bg-bad"
+                    aria-hidden
+                  />
+                  <span className="min-w-0 flex-1 truncate text-sm text-fg">
+                    {f.note}
+                  </span>
                   {clinic && (
                     <span className="hidden shrink-0 text-xs text-fg-tertiary sm:inline">
                       {clinic.name}
@@ -156,19 +185,38 @@ export default async function DashboardPage() {
         )}
       </Section>
 
-      {/* Quick Actions */}
       <Section title="إجراءات سريعة" divided>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <QuickAction href="/clinics/new" icon={<Inbox size={16} strokeWidth={1.75} />} label="إضافة عيادة" />
-          <QuickAction href="/clinics" icon={<Inbox size={16} strokeWidth={1.75} />} label="عرض العيادات" />
-          <QuickAction href="/followups" icon={<Clock size={16} strokeWidth={1.75} />} label="إدارة المتابعات" />
+          <QuickAction
+            href="/clinics/new"
+            icon={<Inbox size={16} strokeWidth={1.75} />}
+            label="إضافة عيادة"
+          />
+          <QuickAction
+            href="/clinics"
+            icon={<Inbox size={16} strokeWidth={1.75} />}
+            label="عرض العيادات"
+          />
+          <QuickAction
+            href="/followups"
+            icon={<Clock size={16} strokeWidth={1.75} />}
+            label="إدارة المتابعات"
+          />
         </div>
       </Section>
     </div>
   );
 }
 
-function QuickAction({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
+function QuickAction({
+  href,
+  icon,
+  label,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+}) {
   return (
     <Link
       href={href}

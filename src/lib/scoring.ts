@@ -10,26 +10,39 @@
  *   عبر validateWeights (توجد بالفعل) دون تغيير هذه الوحدة.
  */
 
-import type { ClinicDoc } from '@/models/Clinic';
-
 export const DEFAULT_WEIGHTS = {
-  problem: 25,  // وضوح المشكلة الرقمية
-  fit: 20,      // ملاءمة الخدمة لاحتياجات العيادة
-  access: 15,   // إمكانية الوصول إلى صاحب القرار
+  problem: 25, // وضوح المشكلة الرقمية
+  fit: 20, // ملاءمة الخدمة لاحتياجات العيادة
+  access: 15, // إمكانية الوصول إلى صاحب القرار
   interest: 25, // وجود اهتمام تجاري فعلي
   nextStep: 15, // وضوح الخطوة التالية وإمكانية المتابعة
 } as const;
 
 export const MAX_TOTAL = 100;
 
-export type ScoreInput = NonNullable<ClinicDoc['scores']>;
+/**
+ * شكل الدرجات المقبول.
+ *
+ * كل الحقول اختيارية — هذا يسمح للاستدعاء بقيم ناقصة (مثلًا عيادة قديمة قبل
+ * إضافة التقييم)، أو بنوع `ClinicListItem['scores']` الذي يعرّف الحقول
+ * كـ optional.
+ */
+export type ScoreInput = {
+  problem?: number;
+  fit?: number;
+  access?: number;
+  interest?: number;
+  nextStep?: number;
+  complete?: boolean;
+};
 
 /**
  * يحسب إجمالي التقييم وعلامة الاكتمال.
- * - يقبل undefined بأمان (عيادة قديمة قبل إضافة التقييم).
+ * - يقبل undefined بأمان.
  * - يقصّ الناتج عند 100 كحد أقصى (حماية من بيانات غير متسقة في القاعدة).
+ * - كل حقل غائب = 0.
  */
-export function scoreClinic(scores: ScoreInput | undefined): {
+export function scoreClinic(scores: ScoreInput | undefined | null): {
   total: number;
   complete: boolean;
 } {

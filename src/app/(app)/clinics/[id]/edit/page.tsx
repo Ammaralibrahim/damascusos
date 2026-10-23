@@ -23,30 +23,12 @@ export default async function EditClinicPage({
     social: clinic.social ?? '',
     source: clinic.source ?? '',
     notes: clinic.notes ?? '',
-    hasWebsite: (clinic.digital?.hasWebsite ?? 'unknown') as
-      | 'yes'
-      | 'no'
-      | 'unknown',
-    mobileFriendly: (clinic.digital?.mobileFriendly ?? 'unknown') as
-      | 'yes'
-      | 'no'
-      | 'unknown',
-    servicesClear: (clinic.digital?.servicesClear ?? 'unknown') as
-      | 'yes'
-      | 'no'
-      | 'unknown',
-    basicInfoPresent: (clinic.digital?.basicInfoPresent ?? 'unknown') as
-      | 'yes'
-      | 'no'
-      | 'unknown',
-    bookingPresent: (clinic.digital?.bookingPresent ?? 'unknown') as
-      | 'yes'
-      | 'no'
-      | 'unknown',
-    contactClear: (clinic.digital?.contactClear ?? 'unknown') as
-      | 'yes'
-      | 'no'
-      | 'unknown',
+    hasWebsite: (clinic.digital?.hasWebsite ?? 'unknown') as 'yes' | 'no' | 'unknown',
+    mobileFriendly: (clinic.digital?.mobileFriendly ?? 'unknown') as 'yes' | 'no' | 'unknown',
+    servicesClear: (clinic.digital?.servicesClear ?? 'unknown') as 'yes' | 'no' | 'unknown',
+    basicInfoPresent: (clinic.digital?.basicInfoPresent ?? 'unknown') as 'yes' | 'no' | 'unknown',
+    bookingPresent: (clinic.digital?.bookingPresent ?? 'unknown') as 'yes' | 'no' | 'unknown',
+    contactClear: (clinic.digital?.contactClear ?? 'unknown') as 'yes' | 'no' | 'unknown',
     observedIssue: clinic.digital?.observedIssue ?? '',
     suggestedImprovement: clinic.digital?.suggestedImprovement ?? '',
     scoreProblem: clinic.scores?.problem ?? 0,

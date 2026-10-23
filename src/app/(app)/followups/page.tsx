@@ -12,10 +12,17 @@ export default async function FollowUpsPage() {
   todayStart.setHours(0, 0, 0, 0);
   const todayEnd = new Date(todayStart);
   todayEnd.setDate(todayEnd.getDate() + 1);
+
   const today = follows.filter(
-    (f) => f.state === 'upcoming' && f.dueAt && f.dueAt >= todayStart && f.dueAt < todayEnd,
+    (f) =>
+      f.state === 'upcoming' &&
+      f.dueAt &&
+      f.dueAt >= todayStart &&
+      f.dueAt < todayEnd,
   );
-  const later = follows.filter((f) => f.state === 'upcoming' && (!f.dueAt || f.dueAt >= todayEnd));
+  const later = follows.filter(
+    (f) => f.state === 'upcoming' && (!f.dueAt || f.dueAt >= todayEnd),
+  );
   const unscheduled = follows.filter((f) => f.state === 'unscheduled');
 
   function Group({
@@ -34,7 +41,9 @@ export default async function FollowUpsPage() {
         <div className="flex items-baseline justify-between gap-2 border-b border-line-subtle pb-2">
           <div>
             <h2 className="text-md font-semibold text-fg">{title}</h2>
-            {description && <p className="mt-0.5 text-xs text-fg-secondary">{description}</p>}
+            {description && (
+              <p className="mt-0.5 text-xs text-fg-secondary">{description}</p>
+            )}
           </div>
           <span className="text-xs text-fg-tertiary tabular">{list.length}</span>
         </div>
@@ -44,7 +53,9 @@ export default async function FollowUpsPage() {
           <ul className="overflow-hidden rounded-lg border border-line-subtle bg-surface">
             {list.map((f, idx) => {
               const clinic =
-                f.clinicId && typeof f.clinicId === 'object' && 'name' in f.clinicId
+                f.clinicId &&
+                typeof f.clinicId === 'object' &&
+                'name' in f.clinicId
                   ? (f.clinicId as { name: string; _id: string })
                   : null;
               return (
@@ -69,7 +80,9 @@ export default async function FollowUpsPage() {
                       {f.dueAt && (
                         <>
                           <span aria-hidden>·</span>
-                          <span className="tabular">{new Date(f.dueAt).toLocaleString('ar-SY')}</span>
+                          <span className="tabular">
+                            {new Date(f.dueAt).toLocaleString('ar-SY')}
+                          </span>
                         </>
                       )}
                     </div>
@@ -89,7 +102,9 @@ export default async function FollowUpsPage() {
       <PageHeader
         overline="المتابعات"
         title="ما يحتاج انتباهك"
-        description={follows.length === 0 ? 'لا متابعات مفتوحة' : `${follows.length} متابعة`}
+        description={
+          follows.length === 0 ? 'لا متابعات مفتوحة' : `${follows.length} متابعة`
+        }
       />
 
       {overdue.length > 0 && (
