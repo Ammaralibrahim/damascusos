@@ -28,7 +28,10 @@
     "noFallthroughCasesInSwitch": false,
     "noImplicitOverride": false,
     "noPropertyAccessFromIndexSignature": false,
-    "noUncheckedIndexedAccess": false
+    "noUncheckedIndexedAccess": false,
+    "suppressImplicitAnyIndexErrors": false,
+    "allowUnreachableCode": true,
+    "allowUnusedLabels": true
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules", "scripts/**/*"]
