@@ -1,0 +1,160 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   DESIGN TOKENS — Damascus.webp OS
+   نظام ألوان: فحمي متدرج + ذهبي شامبانيا
+   ============================================================ */
+:root {
+  color-scheme: dark;
+
+  /* Backgrounds — layered charcoal */
+  --bg-canvas: #15161a;        /* الخلفية الرئيسية — فحمي داكن */
+  --bg-surface: #1c1d22;       /* الأسطح والبطاقات */
+  --bg-surface-2: #23242a;     /* سطح أفتح قليلًا (رؤوس أقسام، hover) */
+  --bg-subtle: #2a2b32;        /* خلفية خفيفة */
+  --bg-hover: #303139;         /* hover state */
+  --bg-input: #1a1b20;         /* حقول الإدخال */
+
+  /* Foregrounds */
+  --fg-primary: #e8e8ea;       /* نص أساسي */
+  --fg-secondary: #a8a9ad;     /* نص ثانوي */
+  --fg-tertiary: #6e6f75;      /* نص رمادي */
+  --fg-inverse: #15161a;       /* نص فوق خلفية فاتحة */
+
+  /* Borders */
+  --border-subtle: #2a2b32;
+  --border-default: #35363d;
+  --border-strong: #45464e;
+
+  /* Accent — champagne gold */
+  --accent: #c9a961;           /* ذهبي شامبانيا */
+  --accent-hover: #d4b675;
+  --accent-soft: #2e2718;      /* خلفية خفيفة للذهبي */
+  --accent-ring: rgba(201, 169, 97, 0.2);
+
+  /* Primary action (dawn) */
+  --primary: #4a7fb5;          /* أزرق هادئ للإجراءات الأساسية */
+  --primary-hover: #5a8fc5;
+  --primary-soft: #1a2433;
+
+  /* Semantic */
+  --success: #6ab88a;
+  --success-bg: #1a2820;
+  --warning: #d4a94a;
+  --warning-bg: #2e2515;
+  --danger: #d46868;
+  --danger-bg: #2e1a1a;
+  --info: #6ba5d4;
+  --info-bg: #1a2433;
+
+  /* Focus */
+  --ring-color: rgba(201, 169, 97, 0.4);
+  --ring-width: 2px;
+  --ring-offset: 2px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* Elevation */
+  --shadow-1: 0 1px 0 0 rgba(0, 0, 0, 0.3), 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 2px 6px -1px rgba(0, 0, 0, 0.4), 0 8px 24px -4px rgba(0, 0, 0, 0.5);
+  --shadow-3: 0 4px 12px -2px rgba(0, 0, 0, 0.5), 0 16px 40px -8px rgba(0, 0, 0, 0.6);
+}
+
+/* خفيف لمن يفضّل الوضع الفاتح */
+[data-theme="light"] {
+  color-scheme: light;
+  --bg-canvas: #f4f4f2;
+  --bg-surface: #fbfbf9;
+  --bg-surface-2: #f1f1ee;
+  --bg-subtle: #ebebe7;
+  --bg-hover: #e7e7e2;
+  --bg-input: #ffffff;
+
+  --fg-primary: #1d1d1f;
+  --fg-secondary: #63636a;
+  --fg-tertiary: #8e8e93;
+  --fg-inverse: #fdfcf9;
+
+  --border-subtle: #e6e6e1;
+  --border-default: #d6d6d0;
+  --border-strong: #b8b8b0;
+
+  --accent: #a88434;
+  --accent-hover: #8f6f2a;
+  --accent-soft: #f5ecd8;
+  --accent-ring: rgba(168, 132, 52, 0.18);
+
+  --primary: #2e5d8c;
+  --primary-hover: #234a70;
+  --primary-soft: #e1eaf5;
+
+  --success: #3b7a5a;
+  --success-bg: #e8f0ea;
+  --warning: #8a6a2e;
+  --warning-bg: #f4ecdc;
+  --danger: #9b4a4a;
+  --danger-bg: #f2e4e4;
+  --info: #35648c;
+  --info-bg: #e1eaf5;
+
+  --ring-color: rgba(168, 132, 52, 0.3);
+
+  --shadow-1: 0 0 0 1px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-2: 0 0 0 1px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.03), 0 8px 24px rgba(0, 0, 0, 0.04);
+  --shadow-3: 0 0 0 1px rgba(0, 0, 0, 0.02), 0 4px 8px rgba(0, 0, 0, 0.03), 0 16px 40px rgba(0, 0, 0, 0.05);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg-canvas);
+  color: var(--fg-primary);
+  font-feature-settings: "ss01", "cv01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Focus ring موحد */
+*:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 var(--ring-offset) var(--bg-canvas),
+    0 0 0 calc(var(--ring-offset) + var(--ring-width)) var(--ring-color);
+  border-radius: var(--radius-sm);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* LTR محتوى داخل RTL */
+.ltr {
+  direction: ltr;
+  text-align: right;
+}
+[dir="ltr"] .ltr {
+  text-align: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
