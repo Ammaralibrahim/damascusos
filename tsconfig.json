@@ -22,16 +22,12 @@
     "incremental": true,
     "plugins": [{ "name": "next" }],
     "paths": { "@/*": ["./src/*"] },
-
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": false,
     "noImplicitOverride": false,
     "noPropertyAccessFromIndexSignature": false,
-    "noUncheckedIndexedAccess": false,
-    "suppressImplicitAnyIndexErrors": false,
-    "allowUnreachableCode": true,
-    "allowUnusedLabels": true
+    "noUncheckedIndexedAccess": false
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules", "scripts/**/*"]
