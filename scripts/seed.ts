@@ -28,8 +28,6 @@ async function main() {
 
   if (!existsSync(envPath)) {
     console.error('\n✗ .env غير موجود في مجلد العمل الحالي.');
-    console.error('  المطلوب: C:\\Users\\ammar\\Desktop\\damascus.webp\\.env');
-    console.error('  انتقل إلى جذر المشروع ثم شغّل الأمر مجددًا.');
     process.exit(1);
   }
   if (!uri) {
@@ -38,9 +36,6 @@ async function main() {
   }
   if (!username || !password) {
     console.error('\n✗ BOOTSTRAP_USERNAME أو BOOTSTRAP_PASSWORD مفقود من .env');
-    console.error('  أضف السطرين التاليين ثم أعد المحاولة:');
-    console.error('    BOOTSTRAP_USERNAME="ammar"');
-    console.error('    BOOTSTRAP_PASSWORD="كلمة-مرور-قوية"');
     process.exit(1);
   }
   if (password.length < 10) {
@@ -49,26 +44,15 @@ async function main() {
   }
   if (!authSecret || authSecret.length < 32) {
     console.warn(`\n⚠ AUTH_SECRET ${authSecret ? `قصير (${authSecret.length})` : 'مفقود'} — تسجيل الدخول سيفشل بعد الـ seed.`);
-    console.warn('  ولّد واحدًا جديدًا: node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'base64url\'))"');
   }
 
-  // ── 2) كشف قاعدة البيانات الافتراضية ────────────────────
-  const uriAfterHost = uri.replace(/^mongodb(\+srv)?:\/\/[^/]+\/?/, '');
-  const dbMatch = uriAfterHost.match(/^([^?]+)/);
-  const dbNameFromUri = dbMatch?.[1] || '';
-  const explicitDb = dbNameFromUri.length > 0;
-
+  // ── 2) الاتصال بقاعدة البيانات ──────────────────────────
   console.log('\n[2/5] الاتصال بقاعدة البيانات');
-  if (!explicitDb) {
-    console.warn('⚠ MONGODB_URI لا يحدد اسم قاعدة بيانات → سيُستخدم "test".');
-    console.warn('  توصية: أضف اسمًا صريحًا، مثل: ...mongodb.net/damascus_os?...');
-  }
-
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
   console.log('  ✓ متصل. اسم قاعدة البيانات:', mongoose.connection.name);
   console.log('  host:', mongoose.connection.host);
 
-  // ── 3) تعريف المخطط (مضمّن لتفادي مشاكل tsconfig في scripts/) ─
+  // ── 3) النموذج ─────────────────────────────────────────
   console.log('\n[3/5] تجهيز النموذج');
   const SettingsSchema = new mongoose.Schema(
     {
@@ -106,11 +90,24 @@ async function main() {
   const existing = await User.findOne({ username }).lean();
   if (existing) {
     console.log(`  ℹ المستخدم "${username}" موجود بالفعل.`);
-    console.log(`    _id: ${existing._id}`);
-    console.log(`    passwordHash يبدأ بـ: ${existing.passwordHash.slice(0, 10)}…`);
-    console.log(`    created: ${new Date((existing as any).createdAt).toISOString()}`);
+    // `existing` هو عنصر واحد (findOne) — لكن نتحقق بـ cast لأن Mongoose
+    // يُعيد نوعًا مركّبًا في بعض الإصدارات
+    const doc = existing as unknown as {
+      _id?: unknown;
+      passwordHash?: string;
+      createdAt?: Date;
+    };
+    if (doc._id != null) {
+      console.log(`    _id: ${String(doc._id)}`);
+    }
+    if (doc.passwordHash) {
+      console.log(`    passwordHash يبدأ بـ: ${doc.passwordHash.slice(0, 10)}…`);
+    }
+    if (doc.createdAt) {
+      console.log(`    created: ${new Date(doc.createdAt).toISOString()}`);
+    }
     console.log('\n  لإعادة تعيين كلمة المرور:');
-    console.log(`    pnpm reset-password ${username} "كلمة-جديدة"`);
+    console.log(`    npm run reset-password ${username} "كلمة-جديدة"`);
     await mongoose.disconnect();
     process.exit(0);
   }
@@ -124,7 +121,7 @@ async function main() {
   const created = await User.create({ username, passwordHash });
   console.log('  ✓ تم الإنشاء في قاعدة البيانات.');
 
-  // تحقق فوري أن الدخول سيعمل
+  // تحقق فوري
   console.log('\n  التحقق من كلمة المرور...');
   const verify = await bcrypt.compare(password, created.passwordHash);
   if (!verify) {
@@ -134,7 +131,6 @@ async function main() {
   }
   console.log('  ✓ كلمة المرور صحيحة.');
 
-  // ── ملخص نهائي ────────────────────────────────────────
   console.log('\n════════════════════════════════════════');
   console.log('  ✓ نجح إنشاء المستخدم');
   console.log('════════════════════════════════════════');
@@ -143,7 +139,7 @@ async function main() {
   console.log('  _id      :', String(created._id));
   console.log('\n  الخطوات التالية:');
   console.log('    1. احذف BOOTSTRAP_PASSWORD من .env (لم يعد لزوم له)');
-  console.log('    2. شغّل: pnpm dev');
+  console.log('    2. شغّل: npm run dev');
   console.log('    3. افتح http://localhost:3000/login');
   console.log(`    4. اسم المستخدم: ${username}`);
   console.log('    5. كلمة المرور: (نفس BOOTSTRAP_PASSWORD التي استخدمتها)');
@@ -162,23 +158,14 @@ main().catch(async (err) => {
 
   if (/bad auth|Authentication failed/i.test(msg)) {
     console.error('السبب: كلمة مرور MongoDB خاطئة.');
-    console.error('الحل  : بدّل كلمة المرور في Atlas وحدّث MONGODB_URI (مع ترميز URL).');
   } else if (/ENOTFOUND|getaddrinfo/i.test(msg)) {
     console.error('السبب: تعذّر الوصول إلى MongoDB host.');
-    console.error('الحل  : تحقق من اتصال الإنترنت ومن اسم cluster في URI.');
   } else if (/IP|whitelist|not allowed/i.test(msg)) {
     console.error('السبب: عنوان IP الحالي غير مسموح في Atlas.');
-    console.error('الحل  : Atlas → Network Access → Add IP Address');
-    console.error('        (احصل على IP الحالي: (Invoke-RestMethod https://api.ipify.org?format=json).ip)');
   } else if (/E11000|duplicate key/i.test(msg)) {
-    console.error('السبب: مستخدم بنفس الاسم موجود (تعارض فهرس unique).');
-    console.error('الحل  : استخدم reset-password بدلًا من seed.');
+    console.error('السبب: مستخدم بنفس الاسم موجود.');
   } else {
     console.error('السبب:', msg);
-    if (err instanceof Error && err.stack) {
-      console.error('\nStack:');
-      console.error(err.stack.split('\n').slice(0, 6).join('\n'));
-    }
   }
   console.error('════════════════════════════════════════\n');
 
