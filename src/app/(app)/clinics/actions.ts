@@ -70,6 +70,7 @@ export async function createClinicAction(form: FormData): Promise<ActionResult> 
     await connectDb();
     const created = await ClinicModel.create({
       name: data.name,
+      clinicType: data.clinicType,
       doctorName: data.doctorName,
       city: data.city,
       area: data.area,
@@ -132,6 +133,7 @@ export async function updateClinicAction(form: FormData): Promise<ActionResult> 
     website: raw.website || undefined,
     social: raw.social || undefined,
     source: raw.source || undefined,
+    clinicType: raw.clinicType || undefined,
     observedIssue: raw.observedIssue || undefined,
     suggestedImprovement: raw.suggestedImprovement || undefined,
     notes: raw.notes || undefined,
@@ -149,6 +151,7 @@ export async function updateClinicAction(form: FormData): Promise<ActionResult> 
 
     const rootFields = [
       'name',
+      'clinicType',
       'doctorName',
       'city',
       'area',
@@ -284,7 +287,7 @@ export async function getClinicDependents(clinicId: string): Promise<{
 }
 
 /* ============================================================
-   حذف عيادة واحدة — مع سجلاتها التابعة
+   حذف عيادة واحدة
    ============================================================ */
 export async function deleteClinicAction(form: FormData): Promise<ActionResult> {
   await requireSession();
@@ -298,8 +301,6 @@ export async function deleteClinicAction(form: FormData): Promise<ActionResult> 
 
   try {
     await connectDb();
-    // نستخدم findById بدون .lean() — يُعيد مستندًا (document) له name
-    // مباشرة، فلا حاجة لـ cast، وTypeScript يعرف النوع بدقة.
     const clinic = await ClinicModel.findById(clinicId).select('name').exec();
     if (!clinic) throw new AppError('العيادة غير موجودة', 'NOT_FOUND', 404);
 
@@ -310,10 +311,8 @@ export async function deleteClinicAction(form: FormData): Promise<ActionResult> 
       };
     }
 
-    // حذف متتابع: نمنع اليتامى بترتيب الحذف
     await InteractionModel.deleteMany({ clinicId });
     await FollowUpModel.deleteMany({ clinicId });
-    // المهام: نفصلها بدلًا من حذفها — قد تكون تاريخية ومهمة
     await TaskModel.updateMany({ clinicId }, { $unset: { clinicId: '' } });
     await ClinicModel.deleteOne({ _id: clinicId });
 
@@ -355,7 +354,6 @@ export async function deleteClinicsAction(form: FormData): Promise<ActionResult>
 
   try {
     await connectDb();
-    // نأخذ فقط المعرفات الموجودة فعلًا (بدون .lean() على find بنوع مركّب)
     const existing = await ClinicModel.find({ _id: { $in: ids } })
       .select('_id')
       .exec();

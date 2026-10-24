@@ -2,16 +2,27 @@ import Link from 'next/link';
 import { Plus, Search, X } from 'lucide-react';
 import { Button, Empty } from '@/components/ui';
 import { PageHeader } from '@/components/page-header';
-import { listClinics } from '@/lib/data';
+import { requireSession } from '@/lib/auth';
+import { listClinics, getClinicTypes } from '@/lib/data';
 import { ClinicsListClient } from './clinics-list-client';
 
 export default async function ClinicsPage({
   searchParams,
 }: {
-  searchParams: { q?: string; stage?: string };
+  searchParams: { q?: string; stage?: string; clinicType?: string };
 }) {
-  const clinics = await listClinics({ q: searchParams.q, stage: searchParams.stage });
-  const hasFilter = Boolean(searchParams.q || searchParams.stage);
+  const session = await requireSession();
+  const [clinics, clinicTypes] = await Promise.all([
+    listClinics({
+      q: searchParams.q,
+      stage: searchParams.stage,
+      clinicType: searchParams.clinicType,
+    }),
+    getClinicTypes(session.userId),
+  ]);
+  const hasFilter = Boolean(
+    searchParams.q || searchParams.stage || searchParams.clinicType,
+  );
 
   return (
     <div className="space-y-6">
@@ -48,6 +59,20 @@ export default async function ClinicsPage({
             className="h-9 w-full rounded-md border border-line bg-input pr-9 pl-3 text-sm text-fg placeholder:text-fg-tertiary transition-[border-color,box-shadow] duration-fast hover:border-line-strong focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
           />
         </div>
+        <select
+          name="clinicType"
+          defaultValue={searchParams.clinicType ?? ''}
+          className="h-9 rounded-md border border-line bg-input px-3 text-sm text-fg focus:border-accent focus:outline-none sm:w-40"
+        >
+          <option value="">كل الأنواع</option>
+          {clinicTypes
+            .filter((t) => t.active)
+            .map((t) => (
+              <option key={t.slug} value={t.slug}>
+                {t.label}
+              </option>
+            ))}
+        </select>
         <select
           name="stage"
           defaultValue={searchParams.stage ?? ''}
@@ -107,13 +132,15 @@ export default async function ClinicsPage({
       ) : (
         <ClinicsListClient
           clinics={clinics.map((c) => ({
-            _id: String(c._id),
+            _id: c._id,
             name: c.name,
+            clinicType: c.clinicType ?? null,
             area: c.area ?? null,
             city: c.city ?? null,
             stage: c.stage,
-            scores: c.scores,
+            scores: c.scores ?? null,
           }))}
+          clinicTypes={clinicTypes.map((t) => ({ slug: t.slug, label: t.label }))}
         />
       )}
     </div>

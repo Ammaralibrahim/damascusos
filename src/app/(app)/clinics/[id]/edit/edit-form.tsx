@@ -15,11 +15,13 @@ import {
   Textarea,
 } from '@/components/ui';
 import { updateClinicAction, type ActionResult } from '../../actions';
+import type { ClinicTypeConfig } from '@/lib/clinic-types';
 
 type Digital = 'yes' | 'no' | 'unknown';
 
 export type EditFormInitial = {
   name: string;
+  clinicType: string;
   doctorName: string;
   city: string;
   area: string;
@@ -53,20 +55,23 @@ const DIGITAL_FIELDS: { key: keyof EditFormInitial; label: string }[] = [
   { key: 'contactClear', label: 'وسائل التواصل واضحة' },
 ];
 
-const SCORE_FIELDS: { key: keyof EditFormInitial; label: string; max: number }[] = [
-  { key: 'scoreProblem', label: 'المشكلة', max: 25 },
-  { key: 'scoreFit', label: 'الملاءمة', max: 20 },
-  { key: 'scoreAccess', label: 'الوصول', max: 15 },
-  { key: 'scoreInterest', label: 'الاهتمام', max: 25 },
-  { key: 'scoreNextStep', label: 'الخطوة', max: 15 },
-];
+const SCORE_FIELDS: { key: keyof EditFormInitial; label: string; max: number }[] =
+  [
+    { key: 'scoreProblem', label: 'المشكلة', max: 25 },
+    { key: 'scoreFit', label: 'الملاءمة', max: 20 },
+    { key: 'scoreAccess', label: 'الوصول', max: 15 },
+    { key: 'scoreInterest', label: 'الاهتمام', max: 25 },
+    { key: 'scoreNextStep', label: 'الخطوة', max: 15 },
+  ];
 
 export function EditForm({
   clinicId,
   initial,
+  clinicTypes,
 }: {
   clinicId: string;
   initial: EditFormInitial;
+  clinicTypes: ClinicTypeConfig[];
 }) {
   const router = useRouter();
   const [state, setState] = useState<ActionResult | null>(null);
@@ -81,7 +86,6 @@ export function EditForm({
         const formData = new FormData(form);
         formData.set('clinicId', clinicId);
 
-        // checkbox → boolean صريح
         const complete = form.querySelector<HTMLInputElement>(
           'input[name="scoringComplete"]',
         );
@@ -109,8 +113,28 @@ export function EditForm({
             <Field label="اسم العيادة" htmlFor="name" required>
               <Input id="name" name="name" defaultValue={initial.name} required />
             </Field>
+            <Field label="نوع العيادة" htmlFor="clinicType">
+              <Select
+                id="clinicType"
+                name="clinicType"
+                defaultValue={initial.clinicType}
+              >
+                <option value="">— غير محدد —</option>
+                {clinicTypes
+                  .filter((t) => t.active || t.slug === initial.clinicType)
+                  .map((t) => (
+                    <option key={t.slug} value={t.slug}>
+                      {t.label}
+                    </option>
+                  ))}
+              </Select>
+            </Field>
             <Field label="اسم الطبيب" htmlFor="doctorName">
-              <Input id="doctorName" name="doctorName" defaultValue={initial.doctorName} />
+              <Input
+                id="doctorName"
+                name="doctorName"
+                defaultValue={initial.doctorName}
+              />
             </Field>
             <Field label="المدينة" htmlFor="city">
               <Input id="city" name="city" defaultValue={initial.city} />
@@ -119,7 +143,12 @@ export function EditForm({
               <Input id="area" name="area" defaultValue={initial.area} />
             </Field>
             <Field label="الهاتف" htmlFor="phone">
-              <Input id="phone" name="phone" defaultValue={initial.phone} dir="ltr" />
+              <Input
+                id="phone"
+                name="phone"
+                defaultValue={initial.phone}
+                dir="ltr"
+              />
             </Field>
             <Field label="الموقع الإلكتروني" htmlFor="website">
               <Input
@@ -131,7 +160,12 @@ export function EditForm({
               />
             </Field>
             <Field label="التواصل الاجتماعي" htmlFor="social">
-              <Input id="social" name="social" defaultValue={initial.social} dir="ltr" />
+              <Input
+                id="social"
+                name="social"
+                defaultValue={initial.social}
+                dir="ltr"
+              />
             </Field>
             <Field label="المصدر" htmlFor="source">
               <Input id="source" name="source" defaultValue={initial.source} />
@@ -219,7 +253,12 @@ export function EditForm({
       <Section title="ملاحظات داخلية">
         <Card>
           <Field label="ملاحظات" htmlFor="notes">
-            <Textarea id="notes" name="notes" rows={4} defaultValue={initial.notes} />
+            <Textarea
+              id="notes"
+              name="notes"
+              rows={4}
+              defaultValue={initial.notes}
+            />
           </Field>
         </Card>
       </Section>
@@ -245,7 +284,7 @@ export function EditForm({
           <span className="inline-flex items-center gap-1 text-xs text-bad">
             <AlertTriangle size={12} strokeWidth={1.75} />
             {state.error}
-          </span> 
+          </span>
         )}
       </div>
     </form>

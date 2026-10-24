@@ -30,6 +30,7 @@ const Scores = new Schema(
 const ClinicSchema = new Schema(
   {
     name: { type: String, required: true, trim: true, index: true },
+    clinicType: { type: String, index: true },
     doctorName: String,
     city: String,
     area: { type: String, index: true },

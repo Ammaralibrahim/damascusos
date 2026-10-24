@@ -17,25 +17,19 @@ import {
   ExternalLink,
   Pencil,
 } from 'lucide-react';
-import {
-  Alert,
-  Badge,
-  Card,
-  Empty,
-  Section,
-} from '@/components/ui';
-import {
-  StageBadge,
-  FollowUpStateBadge,
-} from '@/components/status-badge';
+import { Alert, Badge, Card, Empty, Section } from '@/components/ui';
+import { StageBadge, FollowUpStateBadge } from '@/components/status-badge';
 import { ScoreBadge } from '@/components/score-badge';
 import { PageHeader } from '@/components/page-header';
+import { requireSession } from '@/lib/auth';
 import {
   getClinic,
   getClinicFollowUps,
   getClinicInteractions,
+  getClinicTypes,
 } from '@/lib/data';
 import { scoreClinic } from '@/lib/scoring';
+import { getClinicTypeLabel } from '@/lib/clinic-types';
 import {
   StageSelector,
   InteractionForm,
@@ -93,12 +87,14 @@ export default async function ClinicDetailPage({
 }: {
   params: { id: string };
 }) {
+  const session = await requireSession();
   const clinic = await getClinic(params.id);
   if (!clinic) notFound();
 
-  const [interactions, followUps] = await Promise.all([
+  const [interactions, followUps, clinicTypes] = await Promise.all([
     getClinicInteractions(params.id),
     getClinicFollowUps(params.id),
+    getClinicTypes(session.userId),
   ]);
 
   const score = scoreClinic(clinic.scores);
@@ -135,6 +131,11 @@ export default async function ClinicDetailPage({
         title={clinic.name}
         description={
           <div className="flex flex-wrap items-center gap-2">
+            {clinic.clinicType && (
+              <Badge tone="info">
+                {getClinicTypeLabel(clinic.clinicType, clinicTypes)}
+              </Badge>
+            )}
             <StageBadge stage={clinic.stage} />
             <ScoreBadge total={score.total} complete={score.complete} />
             {clinic.area && (
@@ -170,12 +171,6 @@ export default async function ClinicDetailPage({
           </div>
         }
       />
-
-      {/* ═══════════════════════════════════════════════════════
-          بقية الصفحة كما هي (MiniStat, NextFollowUp, StageSelector,
-          Info, Digital, Score, InteractionForm, Interactions,
-          FollowUps, Notes)
-          ═══════════════════════════════════════════════════════ */}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <MiniStat
@@ -288,10 +283,17 @@ export default async function ClinicDetailPage({
         </Card>
       </Section>
 
-      <Section title="معلومات العيادة" description="البيانات الأساسية وسبل التواصل">
+      <Section
+        title="معلومات العيادة"
+        description="البيانات الأساسية وسبل التواصل"
+      >
         <Card>
           <dl className="grid grid-cols-1 gap-x-8 gap-y-3 md:grid-cols-2">
-            <InfoRow icon={<User size={14} strokeWidth={1.75} />} label="الطبيب" value={clinic.doctorName} />
+            <InfoRow
+              icon={<User size={14} strokeWidth={1.75} />}
+              label="الطبيب"
+              value={clinic.doctorName}
+            />
             <InfoRow
               icon={<MapPin size={14} strokeWidth={1.75} />}
               label="المنطقة"
@@ -362,36 +364,66 @@ export default async function ClinicDetailPage({
           {!hasAnyContactInfo && (
             <div className="mt-4 border-t border-line-subtle pt-3">
               <Alert tone="warn" title="لا توجد وسيلة تواصل">
-                أضف رقم هاتف أو موقعًا إلكترونيًا لتتمكن من التواصل مع العيادة.
+                أضف رقم هاتف أو موقعًا إلكترونيًا لتتمكن من التواصل مع
+                العيادة.
               </Alert>
             </div>
           )}
         </Card>
       </Section>
 
-      <Section title="التقييم الرقمي" description="جودة الحضور الرقمي الحالي للعيادة">
+      <Section
+        title="التقييم الرقمي"
+        description="جودة الحضور الرقمي الحالي للعيادة"
+      >
         <Card>
           <ul className="divide-y divide-line-subtle">
-            <DigitalRow label="وجود موقع إلكتروني" value={digital.hasWebsite ?? 'unknown'} />
-            <DigitalRow label="ملاءمة الموقع للهاتف" value={digital.mobileFriendly ?? 'unknown'} />
-            <DigitalRow label="وضوح الخدمات" value={digital.servicesClear ?? 'unknown'} />
-            <DigitalRow label="توافر المعلومات الأساسية" value={digital.basicInfoPresent ?? 'unknown'} />
-            <DigitalRow label="وسيلة طلب موعد" value={digital.bookingPresent ?? 'unknown'} />
-            <DigitalRow label="وضوح وسائل التواصل" value={digital.contactClear ?? 'unknown'} />
+            <DigitalRow
+              label="وجود موقع إلكتروني"
+              value={digital.hasWebsite ?? 'unknown'}
+            />
+            <DigitalRow
+              label="ملاءمة الموقع للهاتف"
+              value={digital.mobileFriendly ?? 'unknown'}
+            />
+            <DigitalRow
+              label="وضوح الخدمات"
+              value={digital.servicesClear ?? 'unknown'}
+            />
+            <DigitalRow
+              label="توافر المعلومات الأساسية"
+              value={digital.basicInfoPresent ?? 'unknown'}
+            />
+            <DigitalRow
+              label="وسيلة طلب موعد"
+              value={digital.bookingPresent ?? 'unknown'}
+            />
+            <DigitalRow
+              label="وضوح وسائل التواصل"
+              value={digital.contactClear ?? 'unknown'}
+            />
           </ul>
 
           {(digital.observedIssue || digital.suggestedImprovement) && (
             <div className="mt-4 space-y-3 border-t border-line-subtle pt-4">
               {digital.observedIssue && (
                 <div>
-                  <p className="text-xs font-medium text-fg-tertiary">المشكلة الملحوظة</p>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-fg">{digital.observedIssue}</p>
+                  <p className="text-xs font-medium text-fg-tertiary">
+                    المشكلة الملحوظة
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-fg">
+                    {digital.observedIssue}
+                  </p>
                 </div>
               )}
               {digital.suggestedImprovement && (
                 <div>
-                  <p className="text-xs font-medium text-fg-tertiary">التحسين المقترح</p>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-fg">{digital.suggestedImprovement}</p>
+                  <p className="text-xs font-medium text-fg-tertiary">
+                    التحسين المقترح
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-fg">
+                    {digital.suggestedImprovement}
+                  </p>
                 </div>
               )}
             </div>
@@ -430,16 +462,39 @@ export default async function ClinicDetailPage({
       >
         <Card>
           <ul className="divide-y divide-line-subtle">
-            <ScoreRow label="وضوح المشكلة الرقمية" score={clinic.scores?.problem ?? 0} max={25} />
-            <ScoreRow label="ملاءمة الخدمة للاحتياج" score={clinic.scores?.fit ?? 0} max={20} />
-            <ScoreRow label="إمكانية الوصول لصاحب القرار" score={clinic.scores?.access ?? 0} max={15} />
-            <ScoreRow label="وجود اهتمام تجاري فعلي" score={clinic.scores?.interest ?? 0} max={25} />
-            <ScoreRow label="وضوح الخطوة التالية" score={clinic.scores?.nextStep ?? 0} max={15} />
+            <ScoreRow
+              label="وضوح المشكلة الرقمية"
+              score={clinic.scores?.problem ?? 0}
+              max={25}
+            />
+            <ScoreRow
+              label="ملاءمة الخدمة للاحتياج"
+              score={clinic.scores?.fit ?? 0}
+              max={20}
+            />
+            <ScoreRow
+              label="إمكانية الوصول لصاحب القرار"
+              score={clinic.scores?.access ?? 0}
+              max={15}
+            />
+            <ScoreRow
+              label="وجود اهتمام تجاري فعلي"
+              score={clinic.scores?.interest ?? 0}
+              max={25}
+            />
+            <ScoreRow
+              label="وضوح الخطوة التالية"
+              score={clinic.scores?.nextStep ?? 0}
+              max={15}
+            />
           </ul>
         </Card>
       </Section>
 
-      <Section title="تسجيل تواصل جديد" description="أضف مكالمة أو رسالة أو اجتماعًا">
+      <Section
+        title="تسجيل تواصل جديد"
+        description="أضف مكالمة أو رسالة أو اجتماعًا"
+      >
         <Card>
           <InteractionForm clinicId={params.id} />
         </Card>
@@ -461,7 +516,10 @@ export default async function ClinicDetailPage({
           />
         ) : (
           <ol className="relative space-y-4 ps-6">
-            <span className="absolute inset-y-0 end-[7px] w-px bg-line-subtle" aria-hidden />
+            <span
+              className="absolute inset-y-0 end-[7px] w-px bg-line-subtle"
+              aria-hidden
+            />
             {interactions.map((i) => (
               <li key={String(i._id)} className="relative">
                 <span
@@ -472,20 +530,26 @@ export default async function ClinicDetailPage({
                 </span>
                 <div className="rounded-lg border border-line-subtle bg-surface p-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone="neutral">{TYPE_LABEL[i.type] ?? i.type}</Badge>
+                    <Badge tone="neutral">
+                      {TYPE_LABEL[i.type] ?? i.type}
+                    </Badge>
                     <span className="text-[11px] text-fg-tertiary tabular">
                       {formatDate(i.occurredAt)}
                     </span>
                   </div>
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-fg">{i.summary}</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-fg">
+                    {i.summary}
+                  </p>
                   {i.outcome && (
                     <p className="mt-1.5 text-xs text-fg-secondary">
-                      <span className="font-medium">النتيجة:</span> {i.outcome}
+                      <span className="font-medium">النتيجة:</span>{' '}
+                      {i.outcome}
                     </p>
                   )}
                   {i.nextStep && (
                     <p className="mt-0.5 text-xs text-fg-secondary">
-                      <span className="font-medium">الخطوة التالية:</span> {i.nextStep}
+                      <span className="font-medium">الخطوة التالية:</span>{' '}
+                      {i.nextStep}
                     </p>
                   )}
                   {i.followUpAt && (
@@ -507,17 +571,24 @@ export default async function ClinicDetailPage({
         ) : (
           <ul className="overflow-hidden rounded-lg border border-line-subtle bg-surface">
             {followUps.map((f, idx) => {
-              const isOverdue = f.dueAt != null && new Date(f.dueAt) < now;
+              const isOverdue =
+                f.dueAt != null && new Date(f.dueAt) < now;
               return (
                 <li
                   key={String(f._id)}
                   className={`flex flex-wrap items-center gap-3 px-4 py-3 ${
-                    idx !== followUps.length - 1 ? 'border-b border-line-subtle' : ''
+                    idx !== followUps.length - 1
+                      ? 'border-b border-line-subtle'
+                      : ''
                   }`}
                 >
-                  <FollowUpStateBadge state={isOverdue ? 'overdue' : 'upcoming'} />
+                  <FollowUpStateBadge
+                    state={isOverdue ? 'overdue' : 'upcoming'}
+                  />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm text-fg">{f.note}</div>
+                    <div className="truncate text-sm text-fg">
+                      {f.note}
+                    </div>
                     <div className="mt-0.5 text-[11px] text-fg-tertiary tabular">
                       {f.dueAt ? formatDate(f.dueAt) : 'بدون موعد'}
                     </div>
@@ -528,7 +599,9 @@ export default async function ClinicDetailPage({
           </ul>
         )}
         <Card>
-          <div className="mb-2 text-sm font-medium text-fg">إضافة متابعة جديدة</div>
+          <div className="mb-2 text-sm font-medium text-fg">
+            إضافة متابعة جديدة
+          </div>
           <FollowUpForm clinicId={params.id} />
         </Card>
       </Section>
@@ -570,7 +643,9 @@ function MiniStat({
         {icon}
         <span className="text-[11px]">{label}</span>
       </div>
-      <div className={`mt-1 truncate text-base font-semibold tabular ${tones[tone]}`}>
+      <div
+        className={`mt-1 truncate text-base font-semibold tabular ${tones[tone]}`}
+      >
         {value}
       </div>
     </div>
@@ -596,7 +671,9 @@ function InfoRow({
       <div className="min-w-0 flex-1">
         <dt className="text-[11px] text-fg-tertiary">{label}</dt>
         <dd
-          className={`mt-0.5 truncate text-sm ${value ? 'text-fg' : 'text-fg-tertiary'}`}
+          className={`mt-0.5 truncate text-sm ${
+            value ? 'text-fg' : 'text-fg-tertiary'
+          }`}
           dir={ltr ? 'ltr' : undefined}
           style={ltr ? { textAlign: 'right' } : undefined}
         >
@@ -619,7 +696,15 @@ function DigitalRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ScoreRow({ label, score, max }: { label: string; score: number; max: number }) {
+function ScoreRow({
+  label,
+  score,
+  max,
+}: {
+  label: string;
+  score: number;
+  max: number;
+}) {
   const pct = Math.max(0, Math.min(100, (score / max) * 100));
   const tone = pct >= 70 ? 'bg-ok' : pct >= 40 ? 'bg-warn' : 'bg-bad';
   return (

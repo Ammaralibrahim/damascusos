@@ -1,5 +1,16 @@
 import { Schema, model, models, type InferSchemaType } from 'mongoose';
 
+const ClinicTypeSchema = new Schema(
+  {
+    slug: { type: String, required: true },
+    label: { type: String, required: true },
+    description: String,
+    active: { type: Boolean, default: true },
+    builtin: { type: Boolean, default: false },
+  },
+  { _id: false },
+);
+
 const SettingsSchema = new Schema(
   {
     displayName: { type: String, default: 'عمار' },
@@ -15,6 +26,7 @@ const SettingsSchema = new Schema(
     weeklyOutreachGoal: { type: Number, default: 10 },
     demoTimeLimitMinutes: { type: Number, default: 240 },
     inAppNotifications: { type: Boolean, default: true },
+    clinicTypes: { type: [ClinicTypeSchema], default: undefined },
   },
   { _id: false },
 );

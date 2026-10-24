@@ -8,14 +8,19 @@ import { InteractionModel } from '@/models/Interaction';
 import { FocusSessionModel } from '@/models/FocusSession';
 import { DailyReviewModel } from '@/models/DailyReview';
 import { normalizePhone } from './phone';
-import type { ClinicDoc } from '@/models/Clinic';
+import {
+  mergeClinicTypes,
+  DEFAULT_CLINIC_TYPES,
+  type ClinicTypeConfig,
+} from './clinic-types';
 
 /* ============================================================
-   Types — صريحة بالكامل
+   Types
    ============================================================ */
 export type ClinicListItem = {
   _id: string;
   name: string;
+  clinicType?: string;
   doctorName?: string;
   city?: string;
   area?: string;
@@ -138,6 +143,7 @@ export type SettingsResult = {
   weeklyOutreachGoal: number;
   demoTimeLimitMinutes: number;
   inAppNotifications: boolean;
+  clinicTypes: ClinicTypeConfig[];
 };
 
 /* ============================================================
@@ -148,7 +154,7 @@ export async function getSettings(userId: string): Promise<SettingsResult> {
   const u = await UserModel.findById(userId).lean();
   if (!u) throw new Error('المستخدم غير موجود');
   const doc = u as unknown as {
-    settings?: Partial<SettingsResult>;
+    settings?: Partial<SettingsResult> & { clinicTypes?: ClinicTypeConfig[] };
   };
   const s = doc.settings ?? {};
   return {
@@ -165,8 +171,18 @@ export async function getSettings(userId: string): Promise<SettingsResult> {
     weeklyOutreachGoal: s.weeklyOutreachGoal ?? 10,
     demoTimeLimitMinutes: s.demoTimeLimitMinutes ?? 240,
     inAppNotifications: s.inAppNotifications ?? true,
+    clinicTypes: mergeClinicTypes(s.clinicTypes),
   };
 }
+
+export async function getClinicTypes(
+  userId: string,
+): Promise<ClinicTypeConfig[]> {
+  const s = await getSettings(userId);
+  return s.clinicTypes;
+}
+
+export { DEFAULT_CLINIC_TYPES };
 
 /* ============================================================
    Clinics
@@ -175,6 +191,7 @@ function toClinicListItem(raw: unknown): ClinicListItem {
   const c = raw as {
     _id: unknown;
     name: string;
+    clinicType?: string;
     doctorName?: string;
     city?: string;
     area?: string;
@@ -193,6 +210,7 @@ function toClinicListItem(raw: unknown): ClinicListItem {
   return {
     _id: String(c._id),
     name: c.name,
+    clinicType: c.clinicType,
     doctorName: c.doctorName,
     city: c.city,
     area: c.area,
@@ -211,11 +229,12 @@ function toClinicListItem(raw: unknown): ClinicListItem {
 }
 
 export async function listClinics(
-  params: { q?: string; stage?: string } = {},
+  params: { q?: string; stage?: string; clinicType?: string } = {},
 ): Promise<ClinicListItem[]> {
   await connectDb();
   const filter: Record<string, unknown> = {};
   if (params.stage) filter.stage = params.stage;
+  if (params.clinicType) filter.clinicType = params.clinicType;
   if (params.q) {
     const escaped = params.q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const rx = new RegExp(escaped, 'i');

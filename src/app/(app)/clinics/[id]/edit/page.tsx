@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
-import { getClinic } from '@/lib/data';
+import { requireSession } from '@/lib/auth';
+import { getClinic, getClinicTypes } from '@/lib/data';
 import { EditForm } from './edit-form';
 
 export default async function EditClinicPage({
@@ -10,11 +11,15 @@ export default async function EditClinicPage({
 }: {
   params: { id: string };
 }) {
+  const session = await requireSession();
   const clinic = await getClinic(params.id);
   if (!clinic) notFound();
 
+  const clinicTypes = await getClinicTypes(session.userId);
+
   const initial = {
     name: clinic.name,
+    clinicType: clinic.clinicType ?? '',
     doctorName: clinic.doctorName ?? '',
     city: clinic.city ?? '',
     area: clinic.area ?? '',
@@ -23,12 +28,30 @@ export default async function EditClinicPage({
     social: clinic.social ?? '',
     source: clinic.source ?? '',
     notes: clinic.notes ?? '',
-    hasWebsite: (clinic.digital?.hasWebsite ?? 'unknown') as 'yes' | 'no' | 'unknown',
-    mobileFriendly: (clinic.digital?.mobileFriendly ?? 'unknown') as 'yes' | 'no' | 'unknown',
-    servicesClear: (clinic.digital?.servicesClear ?? 'unknown') as 'yes' | 'no' | 'unknown',
-    basicInfoPresent: (clinic.digital?.basicInfoPresent ?? 'unknown') as 'yes' | 'no' | 'unknown',
-    bookingPresent: (clinic.digital?.bookingPresent ?? 'unknown') as 'yes' | 'no' | 'unknown',
-    contactClear: (clinic.digital?.contactClear ?? 'unknown') as 'yes' | 'no' | 'unknown',
+    hasWebsite: (clinic.digital?.hasWebsite ?? 'unknown') as
+      | 'yes'
+      | 'no'
+      | 'unknown',
+    mobileFriendly: (clinic.digital?.mobileFriendly ?? 'unknown') as
+      | 'yes'
+      | 'no'
+      | 'unknown',
+    servicesClear: (clinic.digital?.servicesClear ?? 'unknown') as
+      | 'yes'
+      | 'no'
+      | 'unknown',
+    basicInfoPresent: (clinic.digital?.basicInfoPresent ?? 'unknown') as
+      | 'yes'
+      | 'no'
+      | 'unknown',
+    bookingPresent: (clinic.digital?.bookingPresent ?? 'unknown') as
+      | 'yes'
+      | 'no'
+      | 'unknown',
+    contactClear: (clinic.digital?.contactClear ?? 'unknown') as
+      | 'yes'
+      | 'no'
+      | 'unknown',
     observedIssue: clinic.digital?.observedIssue ?? '',
     suggestedImprovement: clinic.digital?.suggestedImprovement ?? '',
     scoreProblem: clinic.scores?.problem ?? 0,
@@ -56,7 +79,11 @@ export default async function EditClinicPage({
         description="حدّث البيانات الأساسية، التقييم الرقمي، وتقييم فرصة البيع."
       />
 
-      <EditForm clinicId={params.id} initial={initial} />
+      <EditForm
+        clinicId={params.id}
+        initial={initial}
+        clinicTypes={clinicTypes}
+      />
     </div>
   );
 }

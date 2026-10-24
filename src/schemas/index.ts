@@ -45,8 +45,28 @@ const optionalString = z
 
 const yesNoUnknown = z.enum(['yes', 'no', 'unknown']);
 
+export const ClinicTypeInput = z.object({
+  slug: z
+    .string()
+    .trim()
+    .min(1, 'المعرّف مطلوب')
+    .max(60)
+    .regex(/^[a-z0-9_-]+$/, 'المعرّف يجب أن يحتوي حروفًا إنجليزية صغيرة وأرقامًا وشُرَطًا فقط'),
+  label: z.string().trim().min(1, 'الاسم مطلوب').max(80),
+  description: z
+    .string()
+    .trim()
+    .max(300)
+    .optional()
+    .or(z.literal(''))
+    .transform((v) => v || undefined),
+  active: z.coerce.boolean().default(true),
+  builtin: z.coerce.boolean().default(false),
+});
+
 export const ClinicCreateSchema = z.object({
   name: trimmed(2, 120),
+  clinicType: optionalString,
   doctorName: optionalString,
   city: optionalString,
   area: optionalString,
@@ -78,16 +98,9 @@ export const ClinicCreateSchema = z.object({
   notes: optionalString,
 });
 
-/**
- * تحديث العيادة — كل الحقول اختيارية.
- *
- * لماذا schema منفصل بدل ClinicCreateSchema.partial()؟
- * لأن .partial() يحتفظ بقيم default (مثل stage: 'new' و scoringComplete: false).
- * أي تحديث بدون تمرير هذه الحقول سيعيدها إلى القيمة الافتراضية ويمسح بيانات المستخدم.
- * هنا نعيد تعريف كل حقل مع .optional() بدون default.
- */
 export const ClinicUpdateSchema = z.object({
-  name: z.string().trim().min(2, 'الحد الأدنى حرفان').max(120, 'الحد الأقصى 120 حرفًا').optional(),
+  name: z.string().trim().min(2, 'الحد الأدنى حرفان').max(120).optional(),
+  clinicType: optionalString,
   doctorName: optionalString,
   city: optionalString,
   area: optionalString,
@@ -201,6 +214,7 @@ export const ReviewSchema = z.object({
 
 export type ClinicCreateInput = z.infer<typeof ClinicCreateSchema>;
 export type ClinicUpdateInput = z.infer<typeof ClinicUpdateSchema>;
+export type ClinicTypeInput = z.infer<typeof ClinicTypeInput>;
 export type TaskCreateInput = z.infer<typeof TaskCreateSchema>;
 export type InteractionCreateInput = z.infer<typeof InteractionCreateSchema>;
 export type SettingsInput = z.infer<typeof SettingsSchema>;
