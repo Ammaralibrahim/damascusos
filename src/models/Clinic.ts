@@ -34,57 +34,36 @@ const ClinicSchema = new Schema(
     doctorName: String,
     city: String,
     area: { type: String, index: true },
-
-    // وسائل التواصل
     phone: String,
     phoneNormalized: { type: String, index: true },
     website: String,
     social: String,
-    instagramUrl: String,
-    whatsapp: String,
-
     source: String,
-
-    // النموذج التجريبي
-    demoUrl: String,
-    demoStartedAt: Date,
-
     digital: { type: DigitalAssessment, default: () => ({}) },
     scores: { type: Scores, default: () => ({}) },
-
-    // المرحلة الحالية
     stage: {
       type: String,
       enum: [
-        'new', // مرشح
+        'new',
         'verifying',
         'qualified',
-        'contacted', // تم التواصل، بدون رد
-        'awaiting_reply', // بانتظار الرد
-        'initial_interest', // مهتم
-        'discussing', // مناقشة الاحتياجات
-        'demo_preparing', // النموذج قيد التجهيز
-        'demo', // تم عرض النموذج
-        'quote', // عرض سعر
-        'negotiation', // تفاوض
-        'won', // اتفاق
-        'paid', // عميل مدفوع
-        'not_interested', // غير مهتم
-        'paused', // مؤجل/متوقف
-        'future_followup', // متابعة لاحقة
+        'contacted',
+        'awaiting_reply',
+        'initial_interest',
+        'discussing',
+        'demo',
+        'quote',
+        'negotiation',
+        'won',
+        'paid',
+        'not_interested',
+        'future_followup',
       ],
       default: 'new',
       index: true,
     },
     lostReason: String,
-    pausedAt: Date,
-
-    // تواريخ
-    firstContactAt: Date,
     lastContactAt: Date,
-    lastOutcome: String, // ملخص آخر نتيجة: "no_reply", "interested", إلخ — نص حر
-    nextStepNote: String, // الخطوة التالية بجملة واحدة
-
     notes: String,
   },
   { timestamps: true },

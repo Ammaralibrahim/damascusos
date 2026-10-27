@@ -40,8 +40,6 @@ export async function createClinicAction(form: FormData): Promise<ActionResult> 
     scoreAccess: form.get('scoreAccess') ?? 0,
     scoreInterest: form.get('scoreInterest') ?? 0,
     scoreNextStep: form.get('scoreNextStep') ?? 0,
-    demoStartedAt: raw.demoStartedAt || undefined,
-    firstContactAt: raw.firstContactAt || undefined,
   });
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? 'بيانات غير صالحة' };
@@ -55,7 +53,6 @@ export async function createClinicAction(form: FormData): Promise<ActionResult> 
         name: data.name,
         area: data.area,
         website: data.website,
-        instagramUrl: data.instagramUrl,
       });
       if (dups.length) {
         return {
@@ -80,14 +77,7 @@ export async function createClinicAction(form: FormData): Promise<ActionResult> 
       phone: data.phone,
       website: data.website,
       social: data.social,
-      instagramUrl: data.instagramUrl,
-      whatsapp: data.whatsapp,
       source: data.source,
-      demoUrl: data.demoUrl,
-      demoStartedAt: data.demoStartedAt,
-      firstContactAt: data.firstContactAt,
-      lastOutcome: data.lastOutcome,
-      nextStepNote: data.nextStepNote,
       digital: {
         hasWebsite: data.hasWebsite,
         mobileFriendly: data.mobileFriendly,
@@ -142,15 +132,8 @@ export async function updateClinicAction(form: FormData): Promise<ActionResult> 
     phone: raw.phone || undefined,
     website: raw.website || undefined,
     social: raw.social || undefined,
-    instagramUrl: raw.instagramUrl || undefined,
-    whatsapp: raw.whatsapp || undefined,
     source: raw.source || undefined,
     clinicType: raw.clinicType || undefined,
-    demoUrl: raw.demoUrl || undefined,
-    demoStartedAt: raw.demoStartedAt || undefined,
-    firstContactAt: raw.firstContactAt || undefined,
-    lastOutcome: raw.lastOutcome || undefined,
-    nextStepNote: raw.nextStepNote || undefined,
     observedIssue: raw.observedIssue || undefined,
     suggestedImprovement: raw.suggestedImprovement || undefined,
     notes: raw.notes || undefined,
@@ -175,17 +158,9 @@ export async function updateClinicAction(form: FormData): Promise<ActionResult> 
       'phone',
       'website',
       'social',
-      'instagramUrl',
-      'whatsapp',
       'source',
-      'demoUrl',
-      'demoStartedAt',
-      'firstContactAt',
-      'lastOutcome',
-      'nextStepNote',
       'notes',
       'stage',
-      'lostReason',
     ] as const;
     for (const k of rootFields) {
       if (d[k] !== undefined) update[k] = d[k];
@@ -227,7 +202,7 @@ export async function updateClinicAction(form: FormData): Promise<ActionResult> 
 }
 
 /* ============================================================
-   تغيير المرحلة — يسجل حدث stage_change تلقائيًا
+   تغيير المرحلة
    ============================================================ */
 export async function changeStageAction(form: FormData): Promise<ActionResult> {
   await requireSession();
@@ -241,35 +216,16 @@ export async function changeStageAction(form: FormData): Promise<ActionResult> {
   }
   try {
     await connectDb();
-    const before = await ClinicModel.findById(parsed.data.clinicId)
-      .select('stage name')
-      .exec();
-    if (!before) throw new AppError('العيادة غير موجودة', 'NOT_FOUND', 404);
-
     const updates: Record<string, unknown> = { stage: parsed.data.stage };
     if (parsed.data.stage === 'not_interested' && parsed.data.lostReason) {
       updates.lostReason = parsed.data.lostReason;
     }
-    if (parsed.data.stage === 'paused') {
-      updates.pausedAt = new Date();
-    }
-
     const updated = await ClinicModel.findByIdAndUpdate(
       parsed.data.clinicId,
       { $set: updates },
       { new: true, runValidators: true },
     );
     if (!updated) throw new AppError('العيادة غير موجودة', 'NOT_FOUND', 404);
-
-    // سجل الحدث في الـ timeline
-    await InteractionModel.create({
-      clinicId: parsed.data.clinicId,
-      type: 'stage_change',
-      occurredAt: new Date(),
-      summary: `تغيير المرحلة: ${before.stage} ← ${parsed.data.stage}`,
-      outcome: parsed.data.stage,
-    });
-
     revalidatePath(`/clinics/${parsed.data.clinicId}`);
     revalidatePath('/clinics');
     revalidatePath('/');
@@ -280,7 +236,7 @@ export async function changeStageAction(form: FormData): Promise<ActionResult> {
 }
 
 /* ============================================================
-   إنشاء تواصل — يحدّث lastContactAt + firstContactAt + lastOutcome
+   إنشاء تواصل
    ============================================================ */
 export async function createInteractionAction(form: FormData): Promise<ActionResult> {
   await requireSession();
@@ -301,21 +257,8 @@ export async function createInteractionAction(form: FormData): Promise<ActionRes
     const clinic = await ClinicModel.findById(parsed.data.clinicId);
     if (!clinic) throw new AppError('العيادة غير موجودة', 'NOT_FOUND', 404);
     await InteractionModel.create(parsed.data);
-
-    const updates: Record<string, unknown> = {
-      lastContactAt: parsed.data.occurredAt,
-    };
-    if (!clinic.firstContactAt) {
-      updates.firstContactAt = parsed.data.occurredAt;
-    }
-    if (parsed.data.outcome) {
-      updates.lastOutcome = parsed.data.outcome;
-    }
-    if (parsed.data.nextStep) {
-      updates.nextStepNote = parsed.data.nextStep;
-    }
-    await ClinicModel.findByIdAndUpdate(clinic._id, { $set: updates });
-
+    clinic.lastContactAt = parsed.data.occurredAt;
+    await clinic.save();
     revalidatePath(`/clinics/${parsed.data.clinicId}`);
     revalidatePath('/today');
     revalidatePath('/');
