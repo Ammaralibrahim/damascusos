@@ -28,7 +28,15 @@ export type ClinicListItem = {
   phoneNormalized?: string;
   website?: string;
   social?: string;
+  instagramUrl?: string;
+  whatsapp?: string;
   source?: string;
+  demoUrl?: string;
+  demoStartedAt?: Date | null;
+  firstContactAt?: Date | null;
+  lastContactAt?: Date | null;
+  lastOutcome?: string;
+  nextStepNote?: string;
   stage:
     | 'new'
     | 'verifying'
@@ -37,15 +45,17 @@ export type ClinicListItem = {
     | 'awaiting_reply'
     | 'initial_interest'
     | 'discussing'
+    | 'demo_preparing'
     | 'demo'
     | 'quote'
     | 'negotiation'
     | 'won'
     | 'paid'
     | 'not_interested'
+    | 'paused'
     | 'future_followup';
   lostReason?: string;
-  lastContactAt?: Date | null;
+  pausedAt?: Date | null;
   notes?: string;
   digital?: {
     hasWebsite?: 'yes' | 'no' | 'unknown';
@@ -109,10 +119,23 @@ export type TodayInteraction = {
     | 'demo'
     | 'quote'
     | 'followup'
-    | 'note';
+    | 'note'
+    | 'stage_change';
   summary: string;
   occurredAt: Date;
   clinicId?: string | { _id: string; name: string } | null;
+};
+
+export type TimelineEvent = {
+  id: string;
+  kind: 'interaction' | 'followup' | 'stage_change';
+  type: string;
+  occurredAt: Date;
+  title: string;
+  summary?: string;
+  outcome?: string;
+  nextStep?: string;
+  followUpAt?: Date;
 };
 
 export type TodayReviewResult = {
@@ -199,10 +222,18 @@ function toClinicListItem(raw: unknown): ClinicListItem {
     phoneNormalized?: string;
     website?: string;
     social?: string;
+    instagramUrl?: string;
+    whatsapp?: string;
     source?: string;
+    demoUrl?: string;
+    demoStartedAt?: Date | null;
+    firstContactAt?: Date | null;
+    lastContactAt?: Date | null;
+    lastOutcome?: string;
+    nextStepNote?: string;
     stage: ClinicListItem['stage'];
     lostReason?: string;
-    lastContactAt?: Date | null;
+    pausedAt?: Date | null;
     notes?: string;
     digital?: ClinicListItem['digital'];
     scores?: ClinicListItem['scores'];
@@ -218,10 +249,18 @@ function toClinicListItem(raw: unknown): ClinicListItem {
     phoneNormalized: c.phoneNormalized,
     website: c.website,
     social: c.social,
+    instagramUrl: c.instagramUrl,
+    whatsapp: c.whatsapp,
     source: c.source,
+    demoUrl: c.demoUrl,
+    demoStartedAt: c.demoStartedAt ?? null,
+    firstContactAt: c.firstContactAt ?? null,
+    lastContactAt: c.lastContactAt ?? null,
+    lastOutcome: c.lastOutcome,
+    nextStepNote: c.nextStepNote,
     stage: c.stage,
     lostReason: c.lostReason,
-    lastContactAt: c.lastContactAt ?? null,
+    pausedAt: c.pausedAt ?? null,
     notes: c.notes,
     digital: c.digital,
     scores: c.scores,
@@ -229,12 +268,19 @@ function toClinicListItem(raw: unknown): ClinicListItem {
 }
 
 export async function listClinics(
-  params: { q?: string; stage?: string; clinicType?: string } = {},
+  params: {
+    q?: string;
+    stage?: string;
+    clinicType?: string;
+    lastOutcome?: string;
+    hasUpcomingFollowUp?: boolean;
+  } = {},
 ): Promise<ClinicListItem[]> {
   await connectDb();
   const filter: Record<string, unknown> = {};
   if (params.stage) filter.stage = params.stage;
   if (params.clinicType) filter.clinicType = params.clinicType;
+  if (params.lastOutcome) filter.lastOutcome = params.lastOutcome;
   if (params.q) {
     const escaped = params.q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const rx = new RegExp(escaped, 'i');
@@ -243,13 +289,15 @@ export async function listClinics(
       { name: rx },
       { area: rx },
       { website: rx },
+      { doctorName: rx },
+      { instagramUrl: rx },
     ];
     if (phoneNorm) or.push({ phoneNormalized: phoneNorm });
     filter.$or = or;
   }
   const list = await ClinicModel.find(filter)
     .sort({ updatedAt: -1 })
-    .limit(200)
+    .limit(300)
     .lean();
   return (list as unknown[]).map(toClinicListItem);
 }
@@ -270,6 +318,7 @@ export async function findDuplicateCandidates(input: {
   name?: string;
   area?: string;
   website?: string;
+  instagramUrl?: string;
 }): Promise<
   Array<{ _id: string; name: string; area?: string; phone?: string; stage: string }>
 > {
@@ -280,6 +329,7 @@ export async function findDuplicateCandidates(input: {
     if (n) or.push({ phoneNormalized: n });
   }
   if (input.website) or.push({ website: input.website });
+  if (input.instagramUrl) or.push({ instagramUrl: input.instagramUrl });
   if (input.name && input.area) {
     or.push({ name: input.name.trim(), area: input.area.trim() });
   }
@@ -348,6 +398,67 @@ export async function getClinicFollowUps(clinicId: string) {
     dueAt: f.dueAt ?? null,
     status: f.status,
   }));
+}
+
+/**
+ * Timeline موحّد: يجمع Interactions + FollowUps + تغييرات المرحلة
+ * (المسجّلة كـ Interaction من نوع stage_change) في مصفوفة واحدة مرتبة.
+ */
+export async function getClinicTimeline(
+  clinicId: string,
+): Promise<TimelineEvent[]> {
+  await connectDb();
+  const [interactions, followUps] = await Promise.all([
+    InteractionModel.find({ clinicId }).sort({ occurredAt: -1 }).limit(200).lean(),
+    FollowUpModel.find({ clinicId }).sort({ createdAt: -1 }).limit(200).lean(),
+  ]);
+
+  const events: TimelineEvent[] = [];
+
+  for (const raw of interactions as unknown[]) {
+    const i = raw as {
+      _id: unknown;
+      type: TodayInteraction['type'];
+      occurredAt: Date;
+      summary: string;
+      outcome?: string;
+      nextStep?: string;
+      followUpAt?: Date;
+    };
+    events.push({
+      id: `interaction-${String(i._id)}`,
+      kind: i.type === 'stage_change' ? 'stage_change' : 'interaction',
+      type: i.type,
+      occurredAt: i.occurredAt,
+      title: i.summary,
+      outcome: i.outcome,
+      nextStep: i.nextStep,
+      followUpAt: i.followUpAt,
+    });
+  }
+
+  for (const raw of followUps as unknown[]) {
+    const f = raw as {
+      _id: unknown;
+      note: string;
+      dueAt?: Date | null;
+      createdAt?: Date;
+      status: 'open' | 'done' | 'cancelled';
+    };
+    if (!f.createdAt) continue;
+    events.push({
+      id: `followup-${String(f._id)}`,
+      kind: 'followup',
+      type: f.status === 'done' ? 'followup_done' : 'followup',
+      occurredAt: f.createdAt,
+      title: f.note,
+      followUpAt: f.dueAt ?? undefined,
+    });
+  }
+
+  return events.sort(
+    (a, b) => b.occurredAt.getTime() - a.occurredAt.getTime(),
+  );
 }
 
 /* ============================================================

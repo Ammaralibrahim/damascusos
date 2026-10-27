@@ -8,12 +8,14 @@ export const ClinicStage = z.enum([
   'awaiting_reply',
   'initial_interest',
   'discussing',
+  'demo_preparing',
   'demo',
   'quote',
   'negotiation',
   'won',
   'paid',
   'not_interested',
+  'paused',
   'future_followup',
 ]);
 
@@ -30,6 +32,7 @@ export const InteractionType = z.enum([
   'quote',
   'followup',
   'note',
+  'stage_change',
 ]);
 
 const trimmed = (min: number, max: number) =>
@@ -43,23 +46,25 @@ const optionalString = z
   .or(z.literal(''))
   .transform((v) => (v ? v : undefined));
 
+const optionalUrl = z
+  .string()
+  .trim()
+  .url('رابط غير صالح')
+  .optional()
+  .or(z.literal(''))
+  .transform((v) => (v ? v : undefined));
+
 const yesNoUnknown = z.enum(['yes', 'no', 'unknown']);
 
 export const ClinicTypeInput = z.object({
   slug: z
     .string()
     .trim()
-    .min(1, 'المعرّف مطلوب')
+    .min(1)
     .max(60)
     .regex(/^[a-z0-9_-]+$/, 'المعرّف يجب أن يحتوي حروفًا إنجليزية صغيرة وأرقامًا وشُرَطًا فقط'),
-  label: z.string().trim().min(1, 'الاسم مطلوب').max(80),
-  description: z
-    .string()
-    .trim()
-    .max(300)
-    .optional()
-    .or(z.literal(''))
-    .transform((v) => v || undefined),
+  label: z.string().trim().min(1).max(80),
+  description: optionalString,
   active: z.coerce.boolean().default(true),
   builtin: z.coerce.boolean().default(false),
 });
@@ -71,15 +76,16 @@ export const ClinicCreateSchema = z.object({
   city: optionalString,
   area: optionalString,
   phone: optionalString,
-  website: z
-    .string()
-    .trim()
-    .url('رابط غير صالح')
-    .optional()
-    .or(z.literal(''))
-    .transform((v) => (v ? v : undefined)),
+  website: optionalUrl,
   social: optionalString,
+  instagramUrl: optionalUrl,
+  whatsapp: optionalString,
   source: optionalString,
+  demoUrl: optionalUrl,
+  demoStartedAt: z.coerce.date().optional(),
+  firstContactAt: z.coerce.date().optional(),
+  lastOutcome: optionalString,
+  nextStepNote: optionalString,
   hasWebsite: yesNoUnknown.default('unknown'),
   mobileFriendly: yesNoUnknown.default('unknown'),
   servicesClear: yesNoUnknown.default('unknown'),
@@ -99,21 +105,22 @@ export const ClinicCreateSchema = z.object({
 });
 
 export const ClinicUpdateSchema = z.object({
-  name: z.string().trim().min(2, 'الحد الأدنى حرفان').max(120).optional(),
+  name: z.string().trim().min(2).max(120).optional(),
   clinicType: optionalString,
   doctorName: optionalString,
   city: optionalString,
   area: optionalString,
   phone: optionalString,
-  website: z
-    .string()
-    .trim()
-    .url('رابط غير صالح')
-    .optional()
-    .or(z.literal(''))
-    .transform((v) => (v ? v : undefined)),
+  website: optionalUrl,
   social: optionalString,
+  instagramUrl: optionalUrl,
+  whatsapp: optionalString,
   source: optionalString,
+  demoUrl: optionalUrl,
+  demoStartedAt: z.coerce.date().optional(),
+  firstContactAt: z.coerce.date().optional(),
+  lastOutcome: optionalString,
+  nextStepNote: optionalString,
   hasWebsite: yesNoUnknown.optional(),
   mobileFriendly: yesNoUnknown.optional(),
   servicesClear: yesNoUnknown.optional(),
@@ -129,6 +136,7 @@ export const ClinicUpdateSchema = z.object({
   scoreNextStep: z.coerce.number().int().min(0).max(15).optional(),
   scoringComplete: z.coerce.boolean().optional(),
   stage: ClinicStage.optional(),
+  lostReason: optionalString,
   notes: optionalString,
 });
 
